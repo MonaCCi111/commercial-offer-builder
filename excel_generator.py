@@ -29,7 +29,7 @@ class OfferGenerator:
         else:
             wb = Workbook()
             ws = wb.active
-            ws.title = "Коммерческое предложение от ТЕПЛОМИР"
+            ws.title = "КП ТЕПЛОМИР"
             start_row=2
 
             headers = ["Наименование", "Ед. изм.", "Кол-во", "Цена", "Сумма", "Примечание (ИИ)"]
@@ -42,7 +42,7 @@ class OfferGenerator:
         current_row = start_row
         for item in data:
             name= item.get("n", "")
-            unit = item.get("u", "")
+            unit = item.get("u", "").lower()
             quantity = item.get("q", 0)
             price = item.get("p", 0)
             doubt = item.get("r", False)

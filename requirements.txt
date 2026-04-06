@@ -4,3 +4,4 @@ pandas
 openpyxl
 customtkinter
 pyinstaller
+pypdf

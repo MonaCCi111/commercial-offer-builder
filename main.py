@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import datetime
 import threading
 
 import customtkinter as ctk
@@ -100,20 +101,25 @@ class TeplomirApp(ctk.CTk):
 
             final_json_str = json.dumps(all_extracted_items)
 
-            downloads_path = str(Path.home() / "Downloads")
-            output_name = os.path.join(downloads_path, "Коммерческое_предложение.xlsx")
+            documents_path = Path.home() / "Documents"
+
+            kp_folder = documents_path / "КП_Тепломир"
+            kp_folder.mkdir(parents=True, exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+            output_name = str(kp_folder / f"КП_{timestamp}.xlsx")
 
             generator.generate(final_json_str, output_path=output_name)
 
             self.after(0, self.lbl_status.configure, {
-                "text": f"Готово! Сохранено в Загрузки",
+                "text": f"Готово! Сохранено в Документы/КП_Тепломир",
                 "text_color": "green"
             })
 
-            # Показываем сообщение и открываем папку
             self.after(0, messagebox.showinfo, "Успех",
                        f"Коммерческое предложение успешно создано!\nФайл:\n{output_name}")
-            self.after(0, self.show_in_folder, output_name)  # Вызов метода открытия папки
+            self.after(0, self.show_in_folder, output_name)
 
         except Exception as e:
             self.after(0, self.lbl_status.configure, {"text": "Произошла ошибка", "text_color": "red"})
@@ -126,20 +132,20 @@ class TeplomirApp(ctk.CTk):
             self.selected_files = []
 
 
-        def show_in_folder(self, filepath):
-            """Открывает папку в проводнике и выделяет сгенерированный файл"""
-            filepath = os.path.abspath(filepath)
-            system = platform.system()
+    def show_in_folder(self, filepath):
+        """Открывает папку в проводнике и выделяет сгенерированный файл"""
+        filepath = os.path.abspath(filepath)
+        system = platform.system()
 
-            try:
-                if system == "Windows":
-                    subprocess.run(['explorer', '/select,', filepath])
-                elif system == "Darwin":
-                    subprocess.run(['open', '-R', filepath])
-                else:
-                    subprocess.run(['xdg-open', os.path.dirname(filepath)])
-            except Exception as e:
-                print(f"Не удалось открыть папку: {e}")
+        try:
+            if system == "Windows":
+                subprocess.run(['explorer', '/select,', filepath])
+            elif system == "Darwin":
+                subprocess.run(['open', '-R', filepath])
+            else:
+                subprocess.run(['xdg-open', os.path.dirname(filepath)])
+        except Exception as e:
+            print(f"Не удалось открыть папку: {e}")
 
 if __name__ == "__main__":
     app = TeplomirApp()
