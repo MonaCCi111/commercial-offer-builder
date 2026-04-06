@@ -1,12 +1,10 @@
 import os
 import json
 import threading
-from collections.abc import generator
 
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 
-from param import output
 
 from ai_engine import DocumentProcessor
 from excel_generator import OfferGenerator
@@ -36,6 +34,7 @@ class TeplomirApp(ctk.CTk):
 
         self.btn_start = ctk.CTkButton(self, text="Сгенерировать КП", command=self.start_processing, state="disabled",
                                        fg_color="green", hover_color="darkgreen")
+        self.btn_start.pack(pady=10)
 
         self.progress = ctk.CTkProgressBar(self, width=400)
         self.progress.pack(pady=15)
@@ -45,7 +44,7 @@ class TeplomirApp(ctk.CTk):
         self.lbl_status.pack(pady=5)
 
     def select_files(self):
-        file_paths = filedialog.askopenfilename(
+        file_paths = filedialog.askopenfilenames(
             title="Выберите документы",
             filetypes=[("Documents", "*.pdf *.jpg *.jpeg *.png *.xlsx *.xls")]
         )
@@ -60,7 +59,7 @@ class TeplomirApp(ctk.CTk):
         self.progress.set(0)
         self.lbl_status.configure(text="Инициализация нейросети...")
 
-        thread = threading.Thread(target=self.progress_files_thread)
+        thread = threading.Thread(target=self.process_files_thread)
         thread.start()
 
     def process_files_thread(self):

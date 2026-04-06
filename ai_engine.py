@@ -38,7 +38,7 @@ class DocumentProcessor:
                                   description="Цена за единицу (если в документе нет цены, верни 0)"),
                 "r": types.Schema(type=types.Type.BOOLEAN,
                                   description="Флаг сомнения: true, если есть малейшие сомнения по поводу корректности этой позиции"),
-                "rr": types.Schema(type=types.Type.STRING, description="Причина сомнения (иначе пустая стркоа)"),
+                "rr": types.Schema(type=types.Type.STRING, description="Причина сомнения (иначе пустая строка)"),
             },
             required=["n", "u", "q", "p", "r", "rr"]
         )
