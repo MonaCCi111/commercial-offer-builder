@@ -1,4 +1,5 @@
 import os
+import time
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
@@ -73,22 +74,33 @@ class DocumentProcessor:
                 csv_data = self._convert_excel_to_csv(file_path)
                 contents = [csv_data]
                 uploaded_file = None
-
             elif ext in ['.pdf', '.jpg', '.jpeg', '.png']:
                 uploaded_file = self.client.files.upload(file=file_path)
                 contents = [uploaded_file]
-
             else:
                 raise ValueError(f"Неподдерживаемый формат файла: {ext}")
 
-            print("Ожидание ответа от нейросети...")
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=contents,
-                config=self.base_config
-            )
+            print(f"Ожидание ответа от нейросети для {file_path}...")
 
-            return response.text
+            # --- ДОБАВЛЯЕМ МЕХАНИЗМ RETRY ---
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    response = self.client.models.generate_content(
+                        model=self.model_name,
+                        contents=contents,
+                        config=self.base_config
+                    )
+                    return response.text
+                except Exception as api_err:
+                    error_str = str(api_err)
+                    if "503" in error_str or "UNAVAILABLE" in error_str:
+                        if attempt < max_retries - 1:
+                            sleep_time = 2 ** (attempt+1)
+                            print(f"Сервер перегружен. Повторная попытка {attempt + 1} через {sleep_time} сек...")
+                            time.sleep(sleep_time)
+                            continue
+                    raise api_err
 
         except Exception as e:
             return f'{{"error": "Ошибка обработки: {str(e)}"}}'
