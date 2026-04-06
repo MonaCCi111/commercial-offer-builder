@@ -4,6 +4,18 @@ from google.genai import types
 from dotenv import load_dotenv
 import pandas as pd
 
+SYSTEM_PROMPT = """Ты — эксперт-аудитор по оцифровке строительных смет, чеков и накладных для компании в сфере отопления и водоснабжения.
+Твоя единственная цель — извлечь ВСЕ товарные позиции из предоставленного документа и вернуть их в строгом JSON формате.
+
+КРИТИЧЕСКИЕ ПРАВИЛА ИЗВЛЕЧЕНИЯ (СТРОГО СОБЛЮДАТЬ):
+1. ЗАПРЕЩАЕТСЯ ПРОПУСКАТЬ ПОЗИЦИИ: Ты должен извлечь каждую строку с товаром. Если в документе 150 товаров, в твоем ответе должно быть ровно 150 объектов. Не объединяй разные позиции в одну.
+2. ФИЛЬТРАЦИЯ МУСОРА: Игнорируй реквизиты компаний, адреса, общие итоги (суммы в конце), скидки, подписи и печати. Извлекай только конкретную номенклатуру (трубы, фитинги, котлы, краны, услуги монтажа и т.д.).
+3. РАБОТА С ЦЕНОЙ (p): Если в документе не указана цена за единицу товара (например, это просто записка от монтажника), обязательно установи значение ключа "p" равным 0. Не пытайся угадать цену из своих знаний.
+4. ПРОВЕРКА СОМНЕНИЙ (r, rr): Устанавливай флаг "r" в true ТОЛЬКО в следующих случаях:
+   - Текст (особенно рукописный) размыт, и ты не уверен в названии или цифрах.
+   - Единица измерения нетипична или отсутствует.
+   - Если "r" = true, в поле "rr" кратко напиши причину (например: "Плохо видно цену", "Неразборчивый почерк"). Если сомнений нет, "r" = false, а "rr" = "".
+"""
 
 class DocumentProcessor:
     def __init__(self):
@@ -37,6 +49,7 @@ class DocumentProcessor:
         )
 
         self.base_config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
             temperature=0.1,
             response_mime_type="application/json",
             response_schema=response_schema
@@ -51,19 +64,19 @@ class DocumentProcessor:
         except Exception as e:
             raise RuntimeError(f"Ошибка при чтении Excel файла {file_path}")
 
-    def process_document(self, file_path: str, system_prompt: str) -> str:
+    def process_document(self, file_path: str) -> str:
         _, ext = os.path.splitext(file_path.lower())
         contents = []
 
         try:
             if ext in ['.xlsx', '.xls']:
                 csv_data = self._convert_excel_to_csv(file_path)
-                contents = [system_prompt, csv_data]
+                contents = [csv_data]
                 uploaded_file = None
 
             elif ext in ['.pdf', '.jpg', '.jpeg', '.png']:
                 uploaded_file = self.client.files.upload(file=file_path)
-                contents = [system_prompt, uploaded_file]
+                contents = [uploaded_file]
 
             else:
                 raise ValueError(f"Неподдерживаемый формат файла: {ext}")

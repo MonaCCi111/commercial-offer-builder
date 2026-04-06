@@ -2,3 +2,4 @@ google-genai
 python-dotenv
 pandas
 openpyxl
+customtkinter
