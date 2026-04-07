@@ -5,3 +5,8 @@ sources.txt
 __pycache__/
 Коммерческое предложение.xlsx
 ~$Коммерческое предложение.xlsx
+build/
+dist/
+build-env/
+main.spec
+logo.png

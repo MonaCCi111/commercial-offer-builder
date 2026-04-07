@@ -71,12 +71,23 @@ class DocumentProcessor:
 
         print("Инициализация DocumentProcessor (Cloudflare Edition + Chunking) успешна.")
 
-    def _convert_excel_to_csv(self, file_path: str) -> str:
+    def _get_excel_csv_chunks(self, file_path: str, chunk_size: int = 200) -> list:
+        chunks = []
         try:
-            df = pd.read_excel(file_path)
-            return df.to_csv(index=False)
+            dfs = pd.read_excel(file_path, sheet_name=None)
+            for sheet_name, df in dfs.items():
+                df = df.dropna(how='all').dropna(axis=1, how='all')
+                if df.empty:
+                    continue
+                
+                for start_row in range(0, len(df), chunk_size):
+                    end_row = start_row + chunk_size
+                    chunk_df = df.iloc[start_row:end_row]
+                    csv_str = f"--- Лист: {sheet_name} (строки {start_row + 1}-{end_row}) ---\n" + chunk_df.to_csv(index=False)
+                    chunks.append(csv_str)
+            return chunks
         except Exception as e:
-            raise RuntimeError(f"Ошибка при чтении Excel файла {file_path}")
+            raise RuntimeError(f"Ошибка при чтении Excel файла {file_path}: {e}")
 
     def _process_file_direct(self, file_path: str, is_csv_text=False) -> list:
         """Отправляет один файл/чанк и возвращает list словарей."""
@@ -130,8 +141,12 @@ class DocumentProcessor:
 
         try:
             if ext in ['.xlsx', '.xls']:
-                csv_data = self._convert_excel_to_csv(file_path)
-                all_items.extend(self._process_file_direct(csv_data, is_csv_text=True))
+                print(f"Обработка Excel файла {os.path.basename(file_path)}...")
+                csv_chunks = self._get_excel_csv_chunks(file_path, chunk_size=200)
+                total_chunks = len(csv_chunks)
+                for i, csv_chunk in enumerate(csv_chunks):
+                    print(f" -> Отправка части Excel {i + 1} из {total_chunks}...")
+                    all_items.extend(self._process_file_direct(csv_chunk, is_csv_text=True))
 
             elif ext in ['.jpg', '.jpeg', '.png']:
                 print(f"Обработка изображения {os.path.basename(file_path)}...")

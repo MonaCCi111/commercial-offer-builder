@@ -5,3 +5,4 @@ openpyxl
 customtkinter
 pyinstaller
 pypdf
+Pillow
