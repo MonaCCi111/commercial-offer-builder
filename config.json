@@ -1,0 +1,8 @@
+{
+    "GEMINI_API_KEY": "",
+    "WORKER_URL": "",
+    "MODEL_NAME": "gemini-3.1-flash-lite-preview",
+    "TIMEOUT_MS": 60000,
+    "EXCEL_CHUNK_SIZE": 100,
+    "PDF_CHUNK_SIZE": 3
+}
