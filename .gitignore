@@ -10,3 +10,5 @@ dist/
 build-env/
 main.spec
 logo.png
+config.json
+commit_msg.txt

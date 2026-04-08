@@ -22,7 +22,7 @@ class TeplomirApp(ctk.CTk):
         super().__init__()
 
         self.title("Генератор КП")
-        self.geometry("500x300")
+        self.geometry("600x350")
         self.resizable(False, False)
         self.selected_files = []
 
@@ -79,9 +79,11 @@ class TeplomirApp(ctk.CTk):
             for i, file_path in enumerate(self.selected_files):
                 filename = os.path.basename(file_path)
 
-                self.after(0, self.lbl_status.configure, {"text": f"Обработка {i+1} из {total_files}: {filename}"})
+                def update_status(msg):
+                    safe_msg = f"[{i+1}/{total_files}] {filename}\n{msg}"
+                    self.after(0, self.lbl_status.configure, {"text": safe_msg})
 
-                response_str = processor.process_document(file_path)
+                response_str = processor.process_document(file_path, status_callback=update_status)
 
                 try:
                     data = json.loads(response_str)

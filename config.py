@@ -10,6 +10,7 @@ else:
 
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 PROMPT_PATH = os.path.join(BASE_DIR, "prompt.txt")
+ANALYZER_PROMPT_PATH = os.path.join(BASE_DIR, "analyzer_prompt.txt")
 
 # Базовый системный промпт по умолчанию
 DEFAULT_PROMPT = """Ты — эксперт-аудитор по оцифровке смет, чеков и накладных для компании в сфере отопления и водоснабжения.
@@ -27,6 +28,17 @@ DEFAULT_PROMPT = """Ты — эксперт-аудитор по оцифровк
    - Если "r" = true, в поле "rr" кратко напиши причину. Если сомнений нет, "r" = false, а "rr" = "".
 """
 
+ANALYZER_PROMPT = """Ты — Аналитик структуры документов. 
+Твоя задача — изучить предоставленные тебе страницы или строки документа (фрагмент) и написать краткую, но исчерпывающую текстовую инструкцию (шпаргалку) для второго агента-парсера, который будет извлекать товары из документа.
+
+Что нужно найти и описать:
+1. КАРТА КОЛОНОК: Опиши структуру таблицы. Распиши в каких номерах колонок что находится. Опиши так все колонки
+2. ПРАВИЛО ЦЕНЫ (СТРОГИЙ ПРИОРИТЕТ): Ищи нужную цену по правилу: 1) "Цена со скидкой", 2) "Цена с НДС", 3) Просто Цена. Напиши парсеру четко, например: "Брать цену из колонки X (Цена с НДС)".
+3. АНОМАЛИИ: Обрати внимание на странный формат чисел (например, баги 1С с количеством вида "100.000 0" вместо 100 , слипшиеся строки или цены вида 1'987.12). Опиши, как Парсеру правильно очищать эти данные.
+
+Верни только понятный текст-инструкцию. Не пиши никаких комментариев вроде "Конечно, вот ваша структура...". Будь краток и конкретен."
+"""
+
 # Базовые настройки по умолчанию
 DEFAULT_CONFIG = {
     "GEMINI_API_KEY": "",
@@ -34,15 +46,19 @@ DEFAULT_CONFIG = {
     "MODEL_NAME": "gemini-2.5-flash",
     "TIMEOUT_MS": 60000,
     "EXCEL_CHUNK_SIZE": 100,
-    "PDF_CHUNK_SIZE": 3
+    "PDF_CHUNK_SIZE": 3,
+    "EXCEL_HEAD": 100,
+    "PDF_HEAD": 2
 }
 
 class AppConfig:
     def __init__(self):
         self.settings = DEFAULT_CONFIG.copy()
         self.prompt = DEFAULT_PROMPT
+        self.analyzer_prompt = ANALYZER_PROMPT
         self._load_config()
         self._load_prompt()
+        self._load_analyzer_prompt()
 
     def _load_config(self):
         # Читаем config.json, если нет - создаем
@@ -80,6 +96,24 @@ class AppConfig:
                 f.write(DEFAULT_PROMPT)
         except Exception as e:
             print(f"Ошибка создания prompt.txt: {e}")
+
+    def _load_analyzer_prompt(self):
+        if os.path.exists(ANALYZER_PROMPT_PATH):
+            try:
+                with open(ANALYZER_PROMPT_PATH, 'r', encoding='utf-8') as f:
+                    self.analyzer_prompt = f.read()
+            except Exception as e:
+                print(f"Ошибка чтения analyzer_prompt.txt: {e}. Используется базовый промпт.")
+        else:
+            self._save_analyzer_prompt()
+
+    def _save_analyzer_prompt(self):
+        try:
+            with open(ANALYZER_PROMPT_PATH, 'w', encoding='utf-8') as f:
+                f.write(ANALYZER_PROMPT)
+        except Exception as e:
+            print(f"Ошибка создания analyzer_prompt.txt: {e}")
+
 
     def get(self, key):
         return self.settings.get(key)
