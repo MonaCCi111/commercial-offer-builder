@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from datetime import datetime
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
@@ -41,12 +42,19 @@ class OfferGenerator:
             
             # --- ШАПКА ДОКУМЕНТА ---
             # Вставка логотипа
-            logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+            if getattr(sys, 'frozen', False):
+                # Если программа запущена как .exe, берем путь до экзешника
+                base_dir = os.path.dirname(sys.executable)
+            else:
+                # Если как обычный скрипт
+                base_dir = os.path.dirname(__file__)
+
+            logo_path = os.path.join(base_dir, "logo.png")
+
             if os.path.exists(logo_path):
                 try:
                     img = OpenpyxlImage(logo_path)
-                    # Ограничиваем размер логотипа (масштабирование), чтобы он не был гигантским
-                    img.width = int(img.width * (120 / max(img.height, 1))) # Приводим к высоте ~120px
+                    img.width = int(img.width * (120 / max(img.height, 1)))
                     img.height = 120
                     ws.add_image(img, "A1")
                 except Exception as e:
@@ -62,11 +70,11 @@ class OfferGenerator:
             cell_address = ws.cell(row=2, column=3, value="г. Новосибирск, ул. Дачная 60А, офис 218")
             cell_address.font = Font(name="Arial", size=11)
             cell_address.alignment = Alignment(horizontal="right", vertical="center")
-            
+
             ws.merge_cells("C3:E3")
-            cell_contacts = ws.cell(row=3, column=3, value="Тел: +7 (383) 209-05-40 | Email: teplomir2090540@gmail.com")
+            cell_contacts = ws.cell(row=3, column=3, value="Тел: +7 (383) 209-05-40\nEmail: teplomir2090540@gmail.com")
             cell_contacts.font = Font(name="Arial", size=11, bold=True)
-            cell_contacts.alignment = Alignment(horizontal="right", vertical="center")
+            cell_contacts.alignment = Alignment(horizontal="right", vertical="center", wrap_text=True)
 
             # Заголовок документа
             current_date = datetime.now().strftime("%d.%m.%Y")

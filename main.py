@@ -91,7 +91,7 @@ class TeplomirApp(ctk.CTk):
 
                     all_extracted_items.extend(data)
                 except json.JSONDecodeError:
-                    print(f"Ошибка парсинга ответа для файна {filename}")
+                    print(f"Ошибка парсинга ответа для файла {filename}")
 
                 progress_val = (i + 1) / total_files
 
