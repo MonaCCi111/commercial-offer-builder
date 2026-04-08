@@ -6,7 +6,6 @@ import threading
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 
-
 from ai_engine import DocumentProcessor
 from excel_generator import OfferGenerator
 
@@ -17,6 +16,7 @@ from pathlib import Path
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
+
 class TeplomirApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -26,16 +26,16 @@ class TeplomirApp(ctk.CTk):
         self.resizable(False, False)
         self.selected_files = []
 
-        self.title_label = ctk.CTkLabel(self, text = "Автоматизация формирования КП",
+        self.title_label = ctk.CTkLabel(self, text="Автоматизация формирования КП",
                                         font=ctk.CTkFont(size=20, weight="bold"))
         self.title_label.pack(pady=(20, 10))
 
         self.btn_select = ctk.CTkButton(self, text="Выбрать файлы (PDF, JPG, XLSX...)",
-                                        command = self.select_files)
+                                        command=self.select_files)
         self.btn_select.pack(pady=10)
 
-        self.lbl_files = ctk.CTkLabel(self, text= "Файлы не выбраны", text_color="gray")
-        self.lbl_files.pack(pady=(0,10))
+        self.lbl_files = ctk.CTkLabel(self, text="Файлы не выбраны", text_color="gray")
+        self.lbl_files.pack(pady=(0, 10))
 
         self.btn_start = ctk.CTkButton(self, text="Сгенерировать КП", command=self.start_processing, state="disabled",
                                        fg_color="green", hover_color="darkgreen")
@@ -80,8 +80,12 @@ class TeplomirApp(ctk.CTk):
                 filename = os.path.basename(file_path)
 
                 def update_status(msg):
-                    safe_msg = f"[{i+1}/{total_files}] {filename}\n{msg}"
-                    self.after(0, self.lbl_status.configure, {"text": safe_msg})
+                    safe_msg = f"[{i + 1}/{total_files}] {filename}\n{msg}"
+                    self.after(0, lambda m=safe_msg: self.lbl_status.configure(text=safe_msg))
+
+                self.after(0, lambda f=filename, n=i + 1: self.lbl_status.configure(
+                    text=f"Обработка {n} из {total_files}: {f}"
+                ))
 
                 response_str = processor.process_document(file_path, status_callback=update_status)
 
@@ -99,7 +103,7 @@ class TeplomirApp(ctk.CTk):
 
                 self.after(0, self.progress.set, progress_val)
 
-            self.after(0, self.lbl_status.configure, {"text": "Сборка Excel файла..."})
+            self.after(0, lambda: self.lbl_status.configure(text="Сборка Excel файла..."))
 
             final_json_str = json.dumps(all_extracted_items)
 
@@ -114,25 +118,24 @@ class TeplomirApp(ctk.CTk):
 
             generator.generate(final_json_str, output_path=output_name)
 
-            self.after(0, self.lbl_status.configure, {
-                "text": f"Готово! Сохранено в Документы/КП_Тепломир",
-                "text_color": "green"
-            })
+            self.after(0, lambda: self.lbl_status.configure(
+                text=f"Готово! Сохранено в Документы/КП_Тепломир",
+                text_color="green"
+            ))
 
             self.after(0, messagebox.showinfo, "Успех",
                        f"Коммерческое предложение успешно создано!\nФайл:\n{output_name}")
             self.after(0, self.show_in_folder, output_name)
 
         except Exception as e:
-            self.after(0, self.lbl_status.configure, {"text": "Произошла ошибка", "text_color": "red"})
+            self.after(0, lambda: self.lbl_status.configure(text="Произошла ошибка", text_color="red"))
             self.after(0, messagebox.showerror, "Ошибка", str(e))
 
         finally:
-            self.after(0, self.btn_select.configure, {"state": "normal"})
-            self.after(0, self.lbl_files.configure, {"text": "Файлы не выбраны", "text_color": "gray"})
+            self.after(0, lambda: self.btn_select.configure(state="normal"))
+            self.after(0, lambda: self.lbl_files.configure(text="Файлы не выбраны", text_color="gray"))
             self.after(0, self.progress.set, 0)
             self.selected_files = []
-
 
     def show_in_folder(self, filepath):
         """Открывает папку в проводнике и выделяет сгенерированный файл"""
@@ -148,6 +151,7 @@ class TeplomirApp(ctk.CTk):
                 subprocess.run(['xdg-open', os.path.dirname(filepath)])
         except Exception as e:
             print(f"Не удалось открыть папку: {e}")
+
 
 if __name__ == "__main__":
     app = TeplomirApp()
