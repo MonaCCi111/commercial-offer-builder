@@ -6,3 +6,4 @@ customtkinter
 pyinstaller
 pypdf
 Pillow
+docutils

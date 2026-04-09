@@ -2,10 +2,13 @@ import os
 import time
 import json
 import tempfile
+
+from docutils.nodes import target
 from pypdf import PdfReader, PdfWriter
 from google import genai
 from google.genai import types
 import pandas as pd
+from pathlib import Path
 
 from config import config
 
@@ -14,7 +17,8 @@ class DocumentProcessor:
     def __init__(self):
         api_key = config.get("GEMINI_API_KEY")
         WORKER_URL = config.get("WORKER_URL")
-        self.model_name = config.get("MODEL_NAME")
+        self.model_lite = config.get("MODEL_LITE")
+        self.model_vision = config.get("MODEL_VISION")
         timeout_ms = config.get("TIMEOUT_MS")
         self.system_prompt = config.prompt
         self.analyzer_prompt = config.analyzer_prompt
@@ -57,7 +61,7 @@ class DocumentProcessor:
 
         print("Инициализация DocumentProcessor")
 
-    def _analyze_file(self, file_path: str, is_csv_text=False) -> str:
+    def _analyze_file(self, file_path: str, model_name: str, is_csv_text=False) -> str:
         """Анализирует начало документа и возвращает текстовую инструкцию"""
         uploaded_file = None
         contents = []
@@ -84,7 +88,7 @@ class DocumentProcessor:
                     contents = [file_path] if is_csv_text else [uploaded_file]
 
                     response = self.client.models.generate_content(
-                        model=self.model_name,
+                        model=model_name,
                         contents=contents,
                         config=analyzer_config
                     )
@@ -117,11 +121,11 @@ class DocumentProcessor:
         except Exception as e:
             raise RuntimeError(f"Ошибка при чтении Excel файла {file_path}")
 
-    def _process_file_direct(self, file_path: str, is_csv_text=False, instruction_context="") -> list:
+    def _process_file_direct(self, file_path: str, file_name: str, model_name: str, is_csv_text=False, instruction_context="") -> list:
         uploaded_file = None
         contents = []
 
-        dynamic_prompt = self.system_prompt
+        dynamic_prompt =  f"Название текущего файла: {file_name}\n" + self.system_prompt
         if instruction_context:
             dynamic_prompt += f"\n\n--- ИНСТРУКЦИЯ ОТ АНАЛИТИКА ПО ЭТОМУ ДОКУМЕНТУ ---\n{instruction_context}"
 
@@ -154,7 +158,7 @@ class DocumentProcessor:
 
                     # 2. Генерация ответа
                     response = self.client.models.generate_content(
-                        model=self.model_name,
+                        model=model_name,
                         contents=contents,
                         config=parser_config
                     )
@@ -194,7 +198,14 @@ class DocumentProcessor:
         _, ext = os.path.splitext(file_path.lower())
         all_items = []
 
+        file_name = Path(file_path).name
+
         try:
+            if ext in ['.jpg', '.jpeg', '.png']:
+                target_model = self.model_vision
+            else:
+                target_model = self.model_lite
+
             if ext in ['.xlsx', '.xls']:
                 notify(f"Обработка Excel файла {os.path.basename(file_path)}...")
 
@@ -213,7 +224,7 @@ class DocumentProcessor:
 
                     notify(f" -> [Анализ] Изучаем структуру листа '{sheet_name}' (первые {excel_head} строк)...")
                     head_csv = df.head(excel_head).to_csv(index=False)
-                    analyzer_rules = self._analyze_file(head_csv, is_csv_text=True)
+                    analyzer_rules = self._analyze_file(head_csv, target_model, is_csv_text=True)
                     notify(f"    [Аналитик] Правила:\n{analyzer_rules}\n")
 
                     notify(f" -> Лист '{sheet_name}': {total_rows} строк. Нарезка на чанки...")
@@ -225,7 +236,8 @@ class DocumentProcessor:
                         chunk_df = df.iloc[i:end_row]
                         csv_data = chunk_df.to_csv(index=False)
 
-                        chunk_items = self._process_file_direct(csv_data, is_csv_text=True,
+                        chunk_items = self._process_file_direct(csv_data, file_name, target_model,
+                                                                is_csv_text=True,
                                                                 instruction_context=analyzer_rules)
                         all_items.extend(chunk_items)
 
@@ -233,7 +245,8 @@ class DocumentProcessor:
 
             elif ext in ['.jpg', '.jpeg', '.png']:
                 notify(f"Обработка изображения {os.path.basename(file_path)}...")
-                all_items.extend(self._process_file_direct(file_path, is_csv_text=False))
+                all_items.extend(self._process_file_direct(file_path, file_name, target_model,
+                                                           is_csv_text=False))
 
             elif ext == '.pdf':
                 notify(f"Нарезка PDF {os.path.basename(file_path)} на куски...")
@@ -252,7 +265,8 @@ class DocumentProcessor:
                     analyzer_path = tmp_analyzer.name
 
                 try:
-                    analyzer_rules = self._analyze_file(analyzer_path, is_csv_text=False)
+                    analyzer_rules = self._analyze_file(analyzer_path, target_model,
+                                                        is_csv_text=False)
                     notify(f"    [Аналитик] Правила:\n{analyzer_rules}\n")
                 finally:
                     os.remove(analyzer_path)
@@ -270,7 +284,8 @@ class DocumentProcessor:
                         tmp_path = tmp.name
 
                     try:
-                        chunk_items = self._process_file_direct(tmp_path, is_csv_text=False, instruction_context=analyzer_rules)
+                        chunk_items = self._process_file_direct(tmp_path, file_name, target_model,
+                                                                is_csv_text=False, instruction_context=analyzer_rules)
                         all_items.extend(chunk_items)
                     finally:
                         os.remove(tmp_path)

@@ -43,7 +43,8 @@ ANALYZER_PROMPT = """Ты — Аналитик структуры докумен
 DEFAULT_CONFIG = {
     "GEMINI_API_KEY": "",
     "WORKER_URL": "",
-    "MODEL_NAME": "gemini-2.5-flash",
+    "MODEL_LITE": "gemini-3.1-flash-lite-preview",
+    "MODEL_VISION": "gemini-3-flash-preview",
     "TIMEOUT_MS": 60000,
     "EXCEL_CHUNK_SIZE": 100,
     "PDF_CHUNK_SIZE": 3,

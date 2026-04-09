@@ -125,8 +125,7 @@ class OfferGenerator:
             else:
                 price_cell.value = price
             
-            if price != 0:
-                sum_cell.value = f"=C{current_row}*D{current_row}"
+            sum_cell.value = f"=C{current_row}*D{current_row}"
 
             if doubt:
                 note_cell.value = reason
